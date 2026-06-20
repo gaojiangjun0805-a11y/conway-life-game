@@ -76,6 +76,13 @@
       outline-offset: 2px;
     }
 
+    button:disabled,
+    input:disabled,
+    select:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+
     button.primary {
       background: linear-gradient(135deg, #2f8f7f, #3776c9);
       border-color: rgba(120, 168, 255, 0.6);
@@ -383,6 +390,10 @@
       line-height: 1.1;
     }
 
+    .mode-box {
+      margin-bottom: 12px;
+    }
+
     .group {
       padding-top: 13px;
       margin-top: 13px;
@@ -437,6 +448,95 @@
     .segmented button {
       padding: 0 8px;
       font-size: 13px;
+    }
+
+    .challenge-box {
+      border-top: 0;
+      margin-top: 0;
+      padding: 12px;
+      border: 1px solid rgba(245, 201, 95, 0.22);
+      border-radius: 8px;
+      background: rgba(245, 201, 95, 0.06);
+    }
+
+    .app.free-mode .challenge-box {
+      display: none;
+    }
+
+    .challenge-head {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .challenge-head strong {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 16px;
+    }
+
+    .challenge-badge {
+      border: 1px solid rgba(245, 201, 95, 0.35);
+      border-radius: 8px;
+      padding: 4px 8px;
+      color: var(--alive-hot);
+      font-size: 12px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .challenge-goal {
+      margin: 0 0 9px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .challenge-meta {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 6px;
+      margin-bottom: 9px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .challenge-meta span {
+      min-width: 0;
+      padding: 7px 8px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.045);
+    }
+
+    .challenge-meta b {
+      display: block;
+      margin-top: 2px;
+      color: var(--text);
+      font-size: 15px;
+    }
+
+    .challenge-meter {
+      height: 8px;
+      overflow: hidden;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.1);
+      margin-bottom: 10px;
+    }
+
+    .challenge-meter span {
+      display: block;
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, var(--death), var(--alive-hot), var(--alive));
+      transition: width 180ms ease;
+    }
+
+    .challenge-actions {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .pattern-row {
@@ -625,6 +725,10 @@
         font-size: 13px;
       }
 
+      .challenge-actions {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
       .wide {
         grid-column: auto;
       }
@@ -675,15 +779,15 @@
       <aside class="control-panel" aria-label="控制面板">
         <div class="stat-grid">
           <div class="stat">
-            <label>代数</label>
+            <label id="generationLabel">代数</label>
             <strong id="generationStat">0</strong>
           </div>
           <div class="stat">
-            <label>活细胞</label>
+            <label id="aliveLabel">活细胞</label>
             <strong id="aliveStat">0</strong>
           </div>
           <div class="stat">
-            <label>新生/消亡</label>
+            <label id="changeLabel">新生/消亡</label>
             <strong id="changeStat">0 / 0</strong>
           </div>
           <div class="stat">
@@ -691,6 +795,36 @@
             <strong id="stateStat">待开始</strong>
           </div>
         </div>
+
+        <section class="mode-box" aria-label="模式切换">
+          <div class="segmented" role="group" aria-label="选择模式">
+            <button id="challengeModeBtn" type="button" aria-pressed="true">挑战</button>
+            <button id="freeModeBtn" type="button" aria-pressed="false">自由</button>
+          </div>
+        </section>
+
+        <section class="group challenge-box" aria-label="挑战目标">
+          <h2 class="group-title">当前挑战</h2>
+          <div class="challenge-head">
+            <strong id="challengeTitle">目标形态</strong>
+            <span class="challenge-badge" id="challengeBadge">1 / 5</span>
+          </div>
+          <p class="challenge-goal" id="challengeGoal">用有限细胞布置初始状态，运行指定代数后命中目标。</p>
+          <div class="challenge-meta">
+            <span>预算<b id="challengeBudget">0</b></span>
+            <span>步数<b id="challengeSteps">0</b></span>
+            <span>目标<b id="challengeTargets">0</b></span>
+          </div>
+          <div class="challenge-meter" aria-label="目标命中率">
+            <span id="challengeMeter"></span>
+          </div>
+          <div class="button-grid challenge-actions">
+            <button id="runChallengeBtn" class="primary" type="button">验证</button>
+            <button id="resetChallengeBtn" type="button">重置</button>
+            <button id="hintBtn" type="button">提示</button>
+            <button id="nextChallengeBtn" type="button">下一关</button>
+          </div>
+        </section>
 
         <section class="group" aria-label="运行控制">
           <h2 class="group-title">运行</h2>
@@ -753,10 +887,10 @@
   <div class="overlay" id="startOverlay" role="dialog" aria-modal="true" aria-labelledby="startTitle">
     <div class="start-card">
       <h2 id="startTitle">康威生命游戏</h2>
-      <p>点击开始后进入棋盘。细胞会按 B3/S23 规则自动演化，也可以手动绘制、单步观察或放入经典图案。</p>
+      <p>从第一关开始，用有限细胞布置初始状态。运行指定代数后，最终形态命中金色目标才算过关。</p>
       <div class="demo-grid" id="demoGrid" aria-hidden="true"></div>
       <div class="start-actions">
-        <button id="startBtn" class="primary" type="button">开始演化</button>
+        <button id="startBtn" class="primary" type="button">开始挑战</button>
         <button id="quietStartBtn" class="ghost" type="button">静音开始</button>
       </div>
     </div>
@@ -786,6 +920,22 @@
       const wrapBtn = document.getElementById("wrapBtn");
       const patternSelect = document.getElementById("patternSelect");
       const placePatternBtn = document.getElementById("placePatternBtn");
+      const challengeModeBtn = document.getElementById("challengeModeBtn");
+      const freeModeBtn = document.getElementById("freeModeBtn");
+      const runChallengeBtn = document.getElementById("runChallengeBtn");
+      const resetChallengeBtn = document.getElementById("resetChallengeBtn");
+      const hintBtn = document.getElementById("hintBtn");
+      const nextChallengeBtn = document.getElementById("nextChallengeBtn");
+      const challengeTitle = document.getElementById("challengeTitle");
+      const challengeBadge = document.getElementById("challengeBadge");
+      const challengeGoal = document.getElementById("challengeGoal");
+      const challengeBudget = document.getElementById("challengeBudget");
+      const challengeSteps = document.getElementById("challengeSteps");
+      const challengeTargets = document.getElementById("challengeTargets");
+      const challengeMeter = document.getElementById("challengeMeter");
+      const generationLabel = document.getElementById("generationLabel");
+      const aliveLabel = document.getElementById("aliveLabel");
+      const changeLabel = document.getElementById("changeLabel");
       const generationStat = document.getElementById("generationStat");
       const aliveStat = document.getElementById("aliveStat");
       const changeStat = document.getElementById("changeStat");
@@ -802,6 +952,9 @@
         grid: "rgba(255,255,255,0.08)",
         empty: "rgba(255,255,255,0.035)",
         empty2: "rgba(255,255,255,0.018)",
+        target: "#f5c95f",
+        targetFill: "rgba(245,201,95,0.13)",
+        hint: "#ffffff",
         text: "#eef2f7"
       };
 
@@ -830,7 +983,17 @@
         lastFrame: 0,
         accumulator: 0,
         hintVisible: true,
-        stableTicks: 0
+        stableTicks: 0,
+        mode: "challenge",
+        challengeIndex: 0,
+        challengePhase: "build",
+        challengeTarget: [],
+        challengeTargetSet: new Set(),
+        challengeAnchor: { x: 0, y: 0 },
+        challengeScore: 0,
+        challengeHits: 0,
+        challengeExtras: 0,
+        hintIndex: 0
       };
 
       const audio = {
@@ -866,8 +1029,90 @@
         acorn: [[1, 0], [3, 1], [0, 2], [1, 2], [4, 2], [5, 2], [6, 2]]
       };
 
+      const challenges = buildChallenges();
+
       function idx(x, y) {
         return y * state.cols + x;
+      }
+
+      function key(x, y) {
+        return `${x},${y}`;
+      }
+
+      function parseKey(value) {
+        const [x, y] = value.split(",").map(Number);
+        return { x, y };
+      }
+
+      function buildChallenges() {
+        const defs = [
+          {
+            title: "反转脉冲",
+            goal: "用 3 个细胞做出一条竖线，运行 1 代后让金色三连横出现。",
+            budget: 3,
+            steps: 1,
+            solution: [[0, -1], [0, 0], [0, 1]]
+          },
+          {
+            title: "稳定核心",
+            goal: "用 4 个细胞搭出不会变化的结构，运行 3 代后仍完整命中目标。",
+            budget: 4,
+            steps: 3,
+            solution: [[0, 0], [1, 0], [0, 1], [1, 1]]
+          },
+          {
+            title: "蟾蜍换相",
+            goal: "用 6 个细胞摆出错位双排，运行 1 代后捕捉它的下一相。",
+            budget: 6,
+            steps: 1,
+            solution: [[-1, 0], [0, 0], [1, 0], [-2, 1], [-1, 1], [0, 1]]
+          },
+          {
+            title: "信标闪光",
+            goal: "让两个 2x2 小块斜向分离，运行 1 代后保留外角闪光。",
+            budget: 6,
+            steps: 1,
+            solution: [[-2, -2], [-1, -2], [-2, -1], [1, 0], [0, 1], [1, 1]]
+          },
+          {
+            title: "滑翔机起飞",
+            goal: "用 5 个细胞启动滑翔机，运行 4 代后让它移动到目标位置。",
+            budget: 5,
+            steps: 4,
+            solution: [[0, -1], [1, 0], [-1, 1], [0, 1], [1, 1]]
+          }
+        ];
+
+        return defs.map((def) => ({
+          ...def,
+          target: evolveRelative(def.solution, def.steps)
+        }));
+      }
+
+      function evolveRelative(cells, steps) {
+        let live = new Set(cells.map(([x, y]) => key(x, y)));
+        for (let i = 0; i < steps; i += 1) {
+          const counts = new Map();
+          for (const item of live) {
+            const { x, y } = parseKey(item);
+            for (let dy = -1; dy <= 1; dy += 1) {
+              for (let dx = -1; dx <= 1; dx += 1) {
+                if (dx === 0 && dy === 0) continue;
+                const nextKey = key(x + dx, y + dy);
+                counts.set(nextKey, (counts.get(nextKey) || 0) + 1);
+              }
+            }
+          }
+          const next = new Set();
+          for (const [item, count] of counts) {
+            const alive = live.has(item);
+            if (count === 3 || (alive && count === 2)) {
+              next.add(item);
+            }
+          }
+          live = next;
+        }
+        return [...live].map(parseKey).sort((a, b) => (a.y - b.y) || (a.x - b.x)).map(({ x, y }) => [x, y]);
       }
 
       function resizeBoard() {
@@ -892,6 +1137,7 @@
           remapGrid(nextCols, nextRows);
         }
         computeMetrics();
+        updateChallengeTarget();
         draw();
       }
 
@@ -965,6 +1211,8 @@
           }
         }
 
+        drawChallengeTarget(gap);
+
         ctx.strokeStyle = colors.grid;
         ctx.lineWidth = 1;
         ctx.strokeRect(
@@ -973,6 +1221,21 @@
           state.cols * state.cellSize + (state.cols - 1) * gap + 1,
           state.rows * state.cellSize + (state.rows - 1) * gap + 1
         );
+      }
+
+      function drawChallengeTarget(gap) {
+        if (state.mode !== "challenge" || state.challengeTarget.length === 0) return;
+        for (const target of state.challengeTarget) {
+          const px = state.offsetX + target.x * (state.cellSize + gap);
+          const py = state.offsetY + target.y * (state.cellSize + gap);
+          const live = state.cells[target.index] === 1;
+          ctx.lineWidth = Math.max(2, Math.floor(state.cellSize * 0.16));
+          ctx.strokeStyle = live ? colors.alive2 : colors.target;
+          ctx.fillStyle = live ? "rgba(245,201,95,0.08)" : colors.targetFill;
+          roundRect(px + 1, py + 1, Math.max(1, state.cellSize - 2), Math.max(1, state.cellSize - 2), Math.max(2, Math.floor(state.cellSize * 0.24)));
+          ctx.fill();
+          ctx.stroke();
+        }
       }
 
       function roundRect(x, y, width, height, radius) {
@@ -1016,13 +1279,18 @@
 
         if (!changed) {
           state.stableTicks += 1;
-          if (state.stableTicks >= 2 && state.running) {
+          if (state.stableTicks >= 2 && state.running && state.mode !== "challenge") {
             state.running = false;
             statusLine.textContent = alive > 0 ? "结构已经稳定，可以单步观察或重新播种。" : "所有生命都消亡了，试试随机或放置图案。";
             playSfx(180, 0.16, "triangle", 0.45);
           }
         } else {
           state.stableTicks = 0;
+        }
+
+        if (state.mode === "challenge" && state.challengePhase === "running" && state.generation >= currentChallenge().steps) {
+          evaluateChallenge();
+          return;
         }
 
         syncStats();
@@ -1047,7 +1315,198 @@
         return count;
       }
 
+      function currentChallenge() {
+        return challenges[state.challengeIndex] || challenges[0];
+      }
+
+      function updateChallengeTarget() {
+        if (!challenges.length) return;
+        const challenge = currentChallenge();
+        const anchor = {
+          x: Math.floor(state.cols / 2),
+          y: Math.floor(state.rows / 2)
+        };
+        state.challengeAnchor = anchor;
+        state.challengeTarget = challenge.target
+          .map(([x, y]) => ({ x: anchor.x + x, y: anchor.y + y }))
+          .filter((cell) => cell.x >= 0 && cell.x < state.cols && cell.y >= 0 && cell.y < state.rows)
+          .map((cell) => ({ ...cell, index: idx(cell.x, cell.y) }));
+        state.challengeTargetSet = new Set(state.challengeTarget.map((cell) => cell.index));
+        syncChallengeUI();
+      }
+
+      function setMode(mode) {
+        state.mode = mode;
+        document.getElementById("app").classList.toggle("free-mode", mode === "free");
+        document.getElementById("app").classList.toggle("challenge-mode", mode === "challenge");
+        challengeModeBtn.setAttribute("aria-pressed", mode === "challenge" ? "true" : "false");
+        freeModeBtn.setAttribute("aria-pressed", mode === "free" ? "true" : "false");
+        if (mode === "challenge") {
+          loadChallenge(state.challengeIndex);
+        } else {
+          state.challengePhase = "free";
+          state.running = false;
+          seedOpening();
+          statusLine.textContent = "自由模式已开启，可以随意绘制、随机播种和放置图案。";
+        }
+        syncStats();
+      }
+
+      function loadChallenge(index) {
+        state.challengeIndex = Math.max(0, Math.min(challenges.length - 1, index));
+        state.mode = "challenge";
+        state.challengePhase = "build";
+        state.challengeScore = 0;
+        state.challengeHits = 0;
+        state.challengeExtras = 0;
+        state.hintIndex = 0;
+        state.running = false;
+        state.wrap = false;
+        state.generation = 0;
+        state.births = 0;
+        state.deaths = 0;
+        state.stableTicks = 0;
+        state.lastCells.set(state.cells);
+        state.cells.fill(0);
+        state.alive = 0;
+        setWrapMode(false);
+        updateChallengeTarget();
+        statusLine.textContent = "布置初始细胞，命中金色目标后过关。";
+        showChallengeHint();
+        syncStats();
+      }
+
+      function runChallenge() {
+        if (state.mode !== "challenge") {
+          setRunning(!state.running);
+          return;
+        }
+        const challenge = currentChallenge();
+        if (state.challengePhase === "running") return;
+        if (state.challengePhase !== "build") {
+          statusLine.textContent = "本轮已结算，重置后可以重新布置。";
+          playSfx(220, 0.08, "triangle", 0.24);
+          return;
+        }
+        if (state.alive === 0) {
+          statusLine.textContent = "先放置一些初始细胞。";
+          showChallengeHint();
+          return;
+        }
+        if (state.alive > challenge.budget) {
+          statusLine.textContent = `超过预算 ${state.alive - challenge.budget} 个细胞，先删掉多余细胞。`;
+          playSfx(180, 0.12, "triangle", 0.3);
+          return;
+        }
+        state.challengePhase = "running";
+        state.running = true;
+        state.generation = 0;
+        state.births = 0;
+        state.deaths = 0;
+        state.stableTicks = 0;
+        state.accumulator = 0;
+        hideHand();
+        statusLine.textContent = `验证中，运行 ${challenge.steps} 代。`;
+        playSfx(520, 0.09, "sine", 0.34);
+        syncStats();
+      }
+
+      function evaluateChallenge() {
+        const targetCount = state.challengeTargetSet.size || 1;
+        let hits = 0;
+        let extras = 0;
+        for (let i = 0; i < state.cells.length; i += 1) {
+          if (!state.cells[i]) continue;
+          if (state.challengeTargetSet.has(i)) {
+            hits += 1;
+          } else {
+            extras += 1;
+          }
+        }
+        const miss = targetCount - hits;
+        const score = Math.max(0, Math.min(100, Math.round((hits / targetCount) * 100 - extras * 7 - miss * 5)));
+        const passed = hits === targetCount && extras === 0;
+        state.running = false;
+        state.challengeHits = hits;
+        state.challengeExtras = extras;
+        state.challengeScore = passed ? 100 : score;
+        state.challengePhase = passed ? "passed" : "failed";
+
+        if (passed) {
+          statusLine.textContent = state.challengeIndex === challenges.length - 1 ? "全部挑战完成。" : "挑战成功，可以进入下一关。";
+          playSfx(760, 0.11, "sine", 0.4);
+          window.setTimeout(() => playSfx(980, 0.12, "triangle", 0.28), 120);
+        } else {
+          statusLine.textContent = `命中 ${hits}/${targetCount}，额外 ${extras} 个。重置后调整初始布局。`;
+          playSfx(210, 0.16, "triangle", 0.36);
+        }
+        syncStats();
+      }
+
+      function resetChallenge() {
+        loadChallenge(state.challengeIndex);
+      }
+
+      function nextChallenge() {
+        if (state.challengePhase !== "passed") {
+          statusLine.textContent = "先完成当前挑战。";
+          return;
+        }
+        if (state.challengeIndex >= challenges.length - 1) {
+          statusLine.textContent = "已经完成全部挑战。";
+          return;
+        }
+        loadChallenge(state.challengeIndex + 1);
+      }
+
+      function showChallengeHint() {
+        if (state.mode !== "challenge") {
+          showHand();
+          return;
+        }
+        const challenge = currentChallenge();
+        const hint = challenge.solution[state.hintIndex % challenge.solution.length];
+        state.hintIndex += 1;
+        const x = state.challengeAnchor.x + hint[0];
+        const y = state.challengeAnchor.y + hint[1];
+        positionHandAtCell(x, y);
+        statusLine.textContent = "提示手指指向一个可用的初始细胞位置。";
+      }
+
+      function positionHandAtCell(x, y) {
+        const gap = window.innerWidth <= 620 ? 1 : 2;
+        const canvasRect = canvas.getBoundingClientRect();
+        const wrapRect = wrap.getBoundingClientRect();
+        const left = canvasRect.left - wrapRect.left + state.offsetX + x * (state.cellSize + gap) + state.cellSize / 2;
+        const top = canvasRect.top - wrapRect.top + state.offsetY + y * (state.cellSize + gap) + state.cellSize / 2;
+        state.hintVisible = true;
+        lifeHand.style.left = `${left}px`;
+        lifeHand.style.top = `${top}px`;
+        lifeHand.classList.add("show");
+      }
+
+      function syncChallengeUI() {
+        const challenge = currentChallenge();
+        if (!challengeTitle) return;
+        challengeTitle.textContent = challenge.title;
+        challengeBadge.textContent = `${state.challengeIndex + 1} / ${challenges.length}`;
+        challengeGoal.textContent = challenge.goal;
+        challengeBudget.textContent = `${state.alive} / ${challenge.budget}`;
+        challengeSteps.textContent = `${state.generation} / ${challenge.steps}`;
+        challengeTargets.textContent = `${state.challengeHits} / ${state.challengeTargetSet.size || challenge.target.length}`;
+        challengeMeter.style.width = `${state.challengeScore}%`;
+        const canBuild = state.mode === "challenge" && state.challengePhase === "build";
+        runChallengeBtn.disabled = state.mode !== "challenge" || !canBuild || state.alive === 0 || state.alive > challenge.budget;
+        resetChallengeBtn.disabled = state.mode !== "challenge" || state.challengePhase === "running";
+        hintBtn.disabled = state.mode !== "challenge" || state.challengePhase === "running";
+        nextChallengeBtn.disabled = state.challengePhase !== "passed" || state.challengeIndex >= challenges.length - 1;
+      }
+
       function setRunning(nextRunning) {
+        if (state.mode === "challenge") {
+          runChallenge();
+          return;
+        }
         state.running = nextRunning;
         playBtn.textContent = state.running ? "暂停" : "播放";
         stateStat.textContent = state.running ? "演化中" : "已暂停";
@@ -1070,21 +1529,68 @@
       }
 
       function syncStats() {
-        generationStat.textContent = String(state.generation);
-        aliveStat.textContent = String(state.alive);
-        changeStat.textContent = `${state.births} / ${state.deaths}`;
-        if (state.running) {
-          stateStat.textContent = "演化中";
-        } else if (state.alive === 0) {
-          stateStat.textContent = "空棋盘";
+        if (state.mode === "challenge") {
+          const challenge = currentChallenge();
+          generationLabel.textContent = "代数";
+          aliveLabel.textContent = "细胞";
+          changeLabel.textContent = "得分";
+          generationStat.textContent = `${state.generation} / ${challenge.steps}`;
+          aliveStat.textContent = `${state.alive} / ${challenge.budget}`;
+          changeStat.textContent = `${state.challengeScore}%`;
+          if (state.challengePhase === "running") {
+            stateStat.textContent = "验证中";
+          } else if (state.challengePhase === "passed") {
+            stateStat.textContent = "已过关";
+          } else if (state.challengePhase === "failed") {
+            stateStat.textContent = "未命中";
+          } else if (state.alive > challenge.budget) {
+            stateStat.textContent = "超预算";
+          } else {
+            stateStat.textContent = "布置中";
+          }
+          playBtn.textContent = state.challengePhase === "running" ? "验证中" : "验证";
+          stepBtn.disabled = true;
+          randomBtn.disabled = true;
+          placePatternBtn.disabled = true;
+          densityRange.disabled = true;
+          boundedBtn.disabled = true;
+          wrapBtn.disabled = true;
         } else {
-          stateStat.textContent = "已暂停";
+          generationLabel.textContent = "代数";
+          aliveLabel.textContent = "活细胞";
+          changeLabel.textContent = "新生/消亡";
+          generationStat.textContent = String(state.generation);
+          aliveStat.textContent = String(state.alive);
+          changeStat.textContent = `${state.births} / ${state.deaths}`;
+          if (state.running) {
+            stateStat.textContent = "演化中";
+          } else if (state.alive === 0) {
+            stateStat.textContent = "空棋盘";
+          } else {
+            stateStat.textContent = "已暂停";
+          }
+          playBtn.textContent = state.running ? "暂停" : "播放";
+          stepBtn.disabled = false;
+          randomBtn.disabled = false;
+          placePatternBtn.disabled = false;
+          densityRange.disabled = false;
+          boundedBtn.disabled = false;
+          wrapBtn.disabled = false;
         }
-        playBtn.textContent = state.running ? "暂停" : "播放";
+        if (state.mode === "challenge") {
+          clearBtn.textContent = "重置";
+        } else {
+          clearBtn.textContent = "清空";
+        }
+        syncChallengeUI();
         draw();
       }
 
       function randomize() {
+        if (state.mode === "challenge") {
+          statusLine.textContent = "挑战模式不能随机播种。";
+          return;
+        }
         state.lastCells.set(state.cells);
         const threshold = state.density / 100;
         for (let i = 0; i < state.cells.length; i += 1) {
@@ -1102,6 +1608,10 @@
       }
 
       function clearBoard() {
+        if (state.mode === "challenge") {
+          resetChallenge();
+          return;
+        }
         state.lastCells.set(state.cells);
         state.cells.fill(0);
         state.running = false;
@@ -1117,6 +1627,10 @@
       }
 
       function placePattern(name, centerX = Math.floor(state.cols / 2), centerY = Math.floor(state.rows / 2)) {
+        if (state.mode === "challenge") {
+          statusLine.textContent = "挑战模式需要手动布置初始细胞。";
+          return;
+        }
         const pattern = patterns[name] || patterns.glider;
         const width = Math.max(...pattern.map((p) => p[0])) + 1;
         const height = Math.max(...pattern.map((p) => p[1])) + 1;
@@ -1174,6 +1688,10 @@
       function paintCell(event, forceNewStroke = false) {
         const cell = pointerToCell(event);
         if (!cell) return;
+        if (state.mode === "challenge" && state.challengePhase !== "build") {
+          statusLine.textContent = "本轮已经开始或结算，重置后再布置。";
+          return;
+        }
         if (forceNewStroke) {
           state.paintValue = state.cells[cell.index] ? 0 : 1;
           state.lastPaintIndex = -1;
@@ -1186,9 +1704,17 @@
         state.births = state.paintValue ? 1 : 0;
         state.deaths = state.paintValue ? 0 : 1;
         state.stableTicks = 0;
+        state.challengeScore = 0;
+        state.challengeHits = 0;
+        state.challengeExtras = 0;
         recountAlive();
         hideHand();
-        statusLine.textContent = state.paintValue ? "已绘制活细胞。" : "已擦除细胞。";
+        if (state.mode === "challenge") {
+          const challenge = currentChallenge();
+          statusLine.textContent = state.alive > challenge.budget ? `超过预算 ${state.alive - challenge.budget} 个细胞。` : "继续布置，准备好后点验证。";
+        } else {
+          statusLine.textContent = state.paintValue ? "已绘制活细胞。" : "已擦除细胞。";
+        }
         if (forceNewStroke) playSfx(state.paintValue ? 580 : 220, 0.045, "sine", 0.22);
         syncStats();
       }
@@ -1349,14 +1875,31 @@
         syncAudioButton();
         startOverlay.classList.add("hide");
         state.started = true;
-        seedOpening();
-        hideHand();
+        setMode("challenge");
       }
 
       function bindEvents() {
         startBtn.addEventListener("click", () => startGame(true));
         quietStartBtn.addEventListener("click", () => startGame(false));
         audioBtn.addEventListener("click", toggleAudio);
+        challengeModeBtn.addEventListener("click", () => setMode("challenge"));
+        freeModeBtn.addEventListener("click", () => setMode("free"));
+        runChallengeBtn.addEventListener("click", () => {
+          initAudio();
+          runChallenge();
+        });
+        resetChallengeBtn.addEventListener("click", () => {
+          initAudio();
+          resetChallenge();
+        });
+        hintBtn.addEventListener("click", () => {
+          initAudio();
+          showChallengeHint();
+        });
+        nextChallengeBtn.addEventListener("click", () => {
+          initAudio();
+          nextChallenge();
+        });
 
         playBtn.addEventListener("click", () => {
           initAudio();
@@ -1364,6 +1907,10 @@
         });
 
         stepBtn.addEventListener("click", () => {
+          if (state.mode === "challenge") {
+            runChallenge();
+            return;
+          }
           initAudio();
           state.running = false;
           step();
@@ -1436,7 +1983,7 @@
         buildDemo();
         bindEvents();
         resizeBoard();
-        syncStats();
+        setMode("challenge");
         syncAudioButton();
         requestAnimationFrame((now) => {
           state.lastFrame = now;
