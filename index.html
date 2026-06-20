@@ -1,0 +1,1451 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>康威生命游戏</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='10' fill='%23141820'/%3E%3Cg fill='%2344d7a8'%3E%3Crect x='24' y='8' width='12' height='12' rx='3'/%3E%3Crect x='12' y='24' width='12' height='12' rx='3'/%3E%3Crect x='28' y='24' width='12' height='12' rx='3'/%3E%3Crect x='28' y='40' width='12' height='12' rx='3'/%3E%3C/g%3E%3C/svg%3E">
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    :root {
+      color-scheme: dark;
+      --ink: #111318;
+      --paper: #f6f7f4;
+      --panel: rgba(255, 255, 255, 0.08);
+      --panel-strong: rgba(255, 255, 255, 0.12);
+      --line: rgba(255, 255, 255, 0.16);
+      --muted: #aab4c8;
+      --text: #eef2f7;
+      --alive: #44d7a8;
+      --alive-hot: #f5c95f;
+      --birth: #78a8ff;
+      --death: #ef6f6c;
+      --button: #263241;
+      --button-hot: #2f8f7f;
+      --shadow: 0 16px 40px rgba(0, 0, 0, 0.32);
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      overscroll-behavior: none;
+      background:
+        linear-gradient(135deg, rgba(68, 215, 168, 0.12), transparent 24%),
+        linear-gradient(315deg, rgba(239, 111, 108, 0.11), transparent 28%),
+        repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.025) 0 1px, transparent 1px 28px),
+        repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.018) 0 1px, transparent 1px 28px),
+        #141820;
+      color: var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    button {
+      border: 1px solid var(--line);
+      color: var(--text);
+      background: var(--button);
+      border-radius: 8px;
+      min-height: 42px;
+      padding: 0 14px;
+      cursor: pointer;
+      touch-action: manipulation;
+      transition: transform 140ms ease, border-color 140ms ease, background 140ms ease, color 140ms ease;
+    }
+
+    button:active {
+      transform: translateY(1px) scale(0.98);
+    }
+
+    button:focus-visible,
+    input:focus-visible,
+    select:focus-visible {
+      outline: 2px solid var(--alive-hot);
+      outline-offset: 2px;
+    }
+
+    button.primary {
+      background: linear-gradient(135deg, #2f8f7f, #3776c9);
+      border-color: rgba(120, 168, 255, 0.6);
+      font-weight: 800;
+    }
+
+    button.danger {
+      background: #3a2730;
+      border-color: rgba(239, 111, 108, 0.45);
+    }
+
+    button.ghost {
+      background: rgba(255, 255, 255, 0.07);
+    }
+
+    button[aria-pressed="true"] {
+      background: #2f8f7f;
+      border-color: rgba(68, 215, 168, 0.72);
+      color: #061410;
+      font-weight: 900;
+    }
+
+    select {
+      min-height: 42px;
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      color: var(--text);
+      background: #202733;
+      padding: 0 10px;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--alive);
+    }
+
+    .app {
+      position: relative;
+      z-index: 1;
+      height: 100dvh;
+      padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+      display: grid;
+      grid-template-rows: auto minmax(0, 1fr);
+      gap: 12px;
+    }
+
+    .topbar {
+      min-height: 64px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(17, 19, 24, 0.82);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+
+    .brand {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-mark {
+      width: 38px;
+      height: 38px;
+      flex: 0 0 auto;
+      border-radius: 8px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 3px;
+      padding: 5px;
+      background: #202733;
+      border: 1px solid rgba(255, 255, 255, 0.16);
+    }
+
+    .brand-mark span {
+      border-radius: 3px;
+      background: rgba(255, 255, 255, 0.13);
+    }
+
+    .brand-mark span:nth-child(2),
+    .brand-mark span:nth-child(4),
+    .brand-mark span:nth-child(5),
+    .brand-mark span:nth-child(8) {
+      background: var(--alive);
+      box-shadow: 0 0 12px rgba(68, 215, 168, 0.5);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(20px, 2.4vw, 30px);
+      line-height: 1.05;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      margin-top: 4px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .sound-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+
+    .sound-row button {
+      min-width: 42px;
+      padding: 0 10px;
+    }
+
+    .workspace {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 330px;
+      gap: 12px;
+    }
+
+    .board-panel,
+    .control-panel {
+      min-width: 0;
+      min-height: 0;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(17, 19, 24, 0.78);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+
+    .board-panel {
+      display: grid;
+      grid-template-rows: minmax(0, 1fr) auto;
+      overflow: hidden;
+    }
+
+    .canvas-wrap {
+      position: relative;
+      min-height: 0;
+      padding: 14px;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border-radius: 8px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.055), transparent),
+        #0b0f14;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+      cursor: crosshair;
+      touch-action: none;
+    }
+
+    .life-hand {
+      position: absolute;
+      width: 52px;
+      height: 52px;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -82%);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 3;
+      transition: opacity 180ms ease;
+    }
+
+    .life-hand.show {
+      opacity: 1;
+      animation: handPress 1100ms ease-in-out infinite;
+    }
+
+    .life-hand::before {
+      content: "";
+      position: absolute;
+      left: 20px;
+      top: 4px;
+      width: 12px;
+      height: 32px;
+      border-radius: 8px;
+      background: #f3d2ad;
+      border: 2px solid #5d4232;
+      box-shadow: 0 7px 0 #f3d2ad;
+    }
+
+    .life-hand::after {
+      content: "";
+      position: absolute;
+      left: 17px;
+      top: 31px;
+      width: 24px;
+      height: 18px;
+      border-radius: 10px 10px 8px 8px;
+      background: #f3d2ad;
+      border: 2px solid #5d4232;
+    }
+
+    @keyframes handPress {
+      0%, 100% {
+        transform: translate(-50%, -82%);
+      }
+      48%, 62% {
+        transform: translate(-50%, -56%);
+      }
+    }
+
+    .board-footer {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+      min-height: 54px;
+      padding: 8px 14px 12px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .status-line {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .legend {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      font-size: 12px;
+    }
+
+    .legend i {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 3px;
+      margin-right: 5px;
+      vertical-align: -1px;
+    }
+
+    .legend .alive-dot {
+      background: var(--alive);
+    }
+
+    .legend .birth-dot {
+      background: var(--birth);
+    }
+
+    .legend .death-dot {
+      background: var(--death);
+    }
+
+    .control-panel {
+      overflow: auto;
+      padding: 14px;
+      scrollbar-width: thin;
+    }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 12px;
+    }
+
+    .stat {
+      min-width: 0;
+      padding: 10px;
+      border-right: 1px solid rgba(255, 255, 255, 0.1);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .stat:nth-child(2n) {
+      border-right: 0;
+    }
+
+    .stat:nth-last-child(-n+2) {
+      border-bottom: 0;
+    }
+
+    .stat label {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 5px;
+    }
+
+    .stat strong {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 20px;
+      line-height: 1.1;
+    }
+
+    .group {
+      padding-top: 13px;
+      margin-top: 13px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .group:first-of-type {
+      padding-top: 0;
+      margin-top: 0;
+      border-top: 0;
+    }
+
+    .group-title {
+      margin: 0 0 9px;
+      color: #dce4f2;
+      font-size: 14px;
+      font-weight: 800;
+    }
+
+    .button-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .wide {
+      grid-column: 1 / -1;
+    }
+
+    .range-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 6px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .range-row b {
+      color: var(--text);
+      min-width: 52px;
+      text-align: right;
+    }
+
+    .segmented {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+
+    .segmented button {
+      padding: 0 8px;
+      font-size: 13px;
+    }
+
+    .pattern-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 86px;
+      gap: 8px;
+    }
+
+    .rule-box {
+      display: grid;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .rule-formula {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .formula-pill {
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 8px;
+      padding: 8px;
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .formula-pill span {
+      display: block;
+      color: var(--text);
+      font-weight: 900;
+      margin-top: 3px;
+      font-size: 16px;
+    }
+
+    .overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      background:
+        linear-gradient(135deg, rgba(68, 215, 168, 0.18), transparent 30%),
+        linear-gradient(315deg, rgba(245, 201, 95, 0.16), transparent 32%),
+        rgba(8, 10, 14, 0.92);
+      backdrop-filter: blur(12px);
+      transition: opacity 220ms ease, visibility 220ms ease;
+    }
+
+    .overlay.hide {
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+    }
+
+    .start-card {
+      width: min(520px, 100%);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 8px;
+      background: rgba(20, 24, 32, 0.96);
+      box-shadow: 0 24px 72px rgba(0, 0, 0, 0.42);
+      padding: clamp(18px, 4vw, 30px);
+      text-align: center;
+    }
+
+    .start-card h2 {
+      margin: 0;
+      font-size: clamp(28px, 7vw, 52px);
+      line-height: 1;
+      letter-spacing: 0;
+    }
+
+    .start-card p {
+      margin: 12px auto 18px;
+      max-width: 420px;
+      color: var(--muted);
+      line-height: 1.7;
+      font-size: 15px;
+    }
+
+    .demo-grid {
+      width: 168px;
+      aspect-ratio: 1;
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 5px;
+      margin: 0 auto 22px;
+      padding: 8px;
+      border-radius: 8px;
+      background: #0b0f14;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+    }
+
+    .demo-cell {
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.08);
+      transition: background 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+    }
+
+    .demo-cell.live {
+      background: var(--alive);
+      box-shadow: 0 0 12px rgba(68, 215, 168, 0.5);
+      transform: scale(0.92);
+    }
+
+    .start-actions {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .start-actions button {
+      min-width: 146px;
+    }
+
+    @media (max-width: 980px) {
+      .workspace {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: minmax(0, 1fr) auto;
+      }
+
+      .control-panel {
+        max-height: 42dvh;
+      }
+    }
+
+    @media (max-width: 620px) {
+      .app {
+        gap: 8px;
+        padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+      }
+
+      .topbar {
+        grid-template-columns: 1fr;
+        min-height: 0;
+      }
+
+      .brand-mark {
+        width: 34px;
+        height: 34px;
+      }
+
+      .sound-row {
+        justify-content: space-between;
+      }
+
+      .subtitle {
+        display: none;
+      }
+
+      .canvas-wrap {
+        padding: 8px;
+      }
+
+      .board-footer {
+        grid-template-columns: 1fr;
+        gap: 5px;
+        min-height: 0;
+        padding: 7px 10px 10px;
+      }
+
+      .legend {
+        justify-content: space-between;
+      }
+
+      .control-panel {
+        padding: 10px;
+        max-height: 39dvh;
+      }
+
+      .stat strong {
+        font-size: 18px;
+      }
+
+      .button-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+
+      .button-grid button {
+        padding: 0 6px;
+        font-size: 13px;
+      }
+
+      .wide {
+        grid-column: auto;
+      }
+
+      .pattern-row,
+      .rule-formula {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app" id="app">
+    <header class="topbar" aria-label="游戏状态栏">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <span></span><span></span><span></span>
+          <span></span><span></span><span></span>
+          <span></span><span></span><span></span>
+        </div>
+        <div>
+          <h1>康威生命游戏</h1>
+          <div class="subtitle">在二维细胞世界里观察出生、存活与消亡的循环。</div>
+        </div>
+      </div>
+      <div class="sound-row">
+        <span id="audioStatus">BGM: 低音量</span>
+        <button id="audioBtn" class="ghost" type="button" aria-label="切换声音" title="切换声音">声音</button>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <section class="board-panel" aria-label="生命游戏棋盘">
+        <div class="canvas-wrap" id="canvasWrap">
+          <canvas id="lifeCanvas"></canvas>
+          <div class="life-hand show" id="lifeHand" aria-hidden="true"></div>
+        </div>
+        <div class="board-footer">
+          <div class="status-line" id="statusLine">点击或拖动画格来创造第一批生命。</div>
+          <div class="legend" aria-label="颜色图例">
+            <span><i class="alive-dot"></i>存活</span>
+            <span><i class="birth-dot"></i>新生</span>
+            <span><i class="death-dot"></i>消亡</span>
+          </div>
+        </div>
+      </section>
+
+      <aside class="control-panel" aria-label="控制面板">
+        <div class="stat-grid">
+          <div class="stat">
+            <label>代数</label>
+            <strong id="generationStat">0</strong>
+          </div>
+          <div class="stat">
+            <label>活细胞</label>
+            <strong id="aliveStat">0</strong>
+          </div>
+          <div class="stat">
+            <label>新生/消亡</label>
+            <strong id="changeStat">0 / 0</strong>
+          </div>
+          <div class="stat">
+            <label>状态</label>
+            <strong id="stateStat">待开始</strong>
+          </div>
+        </div>
+
+        <section class="group" aria-label="运行控制">
+          <h2 class="group-title">运行</h2>
+          <div class="button-grid">
+            <button id="playBtn" class="primary" type="button">播放</button>
+            <button id="stepBtn" type="button">单步</button>
+            <button id="randomBtn" type="button">随机</button>
+            <button id="clearBtn" class="danger" type="button">清空</button>
+          </div>
+        </section>
+
+        <section class="group" aria-label="演化参数">
+          <h2 class="group-title">参数</h2>
+          <label>
+            <span class="range-row">
+              <span>速度</span>
+              <b id="speedLabel">8 代/秒</b>
+            </span>
+            <input id="speedRange" type="range" min="1" max="24" value="8">
+          </label>
+          <label>
+            <span class="range-row">
+              <span>随机密度</span>
+              <b id="densityLabel">30%</b>
+            </span>
+            <input id="densityRange" type="range" min="8" max="58" value="30">
+          </label>
+          <div class="segmented" role="group" aria-label="边界模式">
+            <button id="boundedBtn" type="button" aria-pressed="true">固定边缘</button>
+            <button id="wrapBtn" type="button" aria-pressed="false">环形世界</button>
+          </div>
+        </section>
+
+        <section class="group" aria-label="预设图案">
+          <h2 class="group-title">图案</h2>
+          <div class="pattern-row">
+            <select id="patternSelect" aria-label="选择图案">
+              <option value="glider">滑翔机</option>
+              <option value="blinker">闪烁器</option>
+              <option value="toad">蟾蜍</option>
+              <option value="lwss">轻型飞船</option>
+              <option value="pulsar">脉冲星</option>
+              <option value="acorn">橡果</option>
+            </select>
+            <button id="placePatternBtn" type="button">放置</button>
+          </div>
+        </section>
+
+        <section class="group rule-box" aria-label="规则">
+          <h2 class="group-title">规则</h2>
+          <div class="rule-formula">
+            <div class="formula-pill">存活条件<span>2 或 3 个邻居</span></div>
+            <div class="formula-pill">出生条件<span>正好 3 个邻居</span></div>
+          </div>
+        </section>
+      </aside>
+    </main>
+  </div>
+
+  <div class="overlay" id="startOverlay" role="dialog" aria-modal="true" aria-labelledby="startTitle">
+    <div class="start-card">
+      <h2 id="startTitle">康威生命游戏</h2>
+      <p>点击开始后进入棋盘。细胞会按 B3/S23 规则自动演化，也可以手动绘制、单步观察或放入经典图案。</p>
+      <div class="demo-grid" id="demoGrid" aria-hidden="true"></div>
+      <div class="start-actions">
+        <button id="startBtn" class="primary" type="button">开始演化</button>
+        <button id="quietStartBtn" class="ghost" type="button">静音开始</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const canvas = document.getElementById("lifeCanvas");
+      const ctx = canvas.getContext("2d");
+      const wrap = document.getElementById("canvasWrap");
+      const startOverlay = document.getElementById("startOverlay");
+      const startBtn = document.getElementById("startBtn");
+      const quietStartBtn = document.getElementById("quietStartBtn");
+      const audioBtn = document.getElementById("audioBtn");
+      const audioStatus = document.getElementById("audioStatus");
+      const playBtn = document.getElementById("playBtn");
+      const stepBtn = document.getElementById("stepBtn");
+      const randomBtn = document.getElementById("randomBtn");
+      const clearBtn = document.getElementById("clearBtn");
+      const speedRange = document.getElementById("speedRange");
+      const densityRange = document.getElementById("densityRange");
+      const densityLabel = document.getElementById("densityLabel");
+      const speedLabel = document.getElementById("speedLabel");
+      const boundedBtn = document.getElementById("boundedBtn");
+      const wrapBtn = document.getElementById("wrapBtn");
+      const patternSelect = document.getElementById("patternSelect");
+      const placePatternBtn = document.getElementById("placePatternBtn");
+      const generationStat = document.getElementById("generationStat");
+      const aliveStat = document.getElementById("aliveStat");
+      const changeStat = document.getElementById("changeStat");
+      const stateStat = document.getElementById("stateStat");
+      const statusLine = document.getElementById("statusLine");
+      const demoGrid = document.getElementById("demoGrid");
+      const lifeHand = document.getElementById("lifeHand");
+
+      const colors = {
+        alive: "#44d7a8",
+        alive2: "#f5c95f",
+        birth: "#78a8ff",
+        death: "#ef6f6c",
+        grid: "rgba(255,255,255,0.08)",
+        empty: "rgba(255,255,255,0.035)",
+        empty2: "rgba(255,255,255,0.018)",
+        text: "#eef2f7"
+      };
+
+      const state = {
+        cols: 44,
+        rows: 32,
+        cells: new Uint8Array(44 * 32),
+        lastCells: new Uint8Array(44 * 32),
+        running: false,
+        started: false,
+        wrap: false,
+        generation: 0,
+        alive: 0,
+        births: 0,
+        deaths: 0,
+        speed: Number(speedRange.value),
+        density: Number(densityRange.value),
+        pointerDown: false,
+        paintValue: 1,
+        lastPaintIndex: -1,
+        cellSize: 10,
+        offsetX: 0,
+        offsetY: 0,
+        cssWidth: 1,
+        cssHeight: 1,
+        lastFrame: 0,
+        accumulator: 0,
+        hintVisible: true,
+        stableTicks: 0
+      };
+
+      const audio = {
+        ctx: null,
+        master: null,
+        music: null,
+        sfx: null,
+        enabled: true,
+        started: false,
+        musicTimer: null,
+        note: 0,
+        bgmVolume: 0.12,
+        sfxVolume: 0.18
+      };
+
+      const patterns = {
+        glider: [[1, 0], [2, 1], [0, 2], [1, 2], [2, 2]],
+        blinker: [[0, 0], [1, 0], [2, 0]],
+        toad: [[1, 0], [2, 0], [3, 0], [0, 1], [1, 1], [2, 1]],
+        lwss: [[1, 0], [4, 0], [0, 1], [0, 2], [4, 2], [0, 3], [1, 3], [2, 3], [3, 3]],
+        pulsar: [
+          [2, 0], [3, 0], [4, 0], [8, 0], [9, 0], [10, 0],
+          [0, 2], [5, 2], [7, 2], [12, 2],
+          [0, 3], [5, 3], [7, 3], [12, 3],
+          [0, 4], [5, 4], [7, 4], [12, 4],
+          [2, 5], [3, 5], [4, 5], [8, 5], [9, 5], [10, 5],
+          [2, 7], [3, 7], [4, 7], [8, 7], [9, 7], [10, 7],
+          [0, 8], [5, 8], [7, 8], [12, 8],
+          [0, 9], [5, 9], [7, 9], [12, 9],
+          [0, 10], [5, 10], [7, 10], [12, 10],
+          [2, 12], [3, 12], [4, 12], [8, 12], [9, 12], [10, 12]
+        ],
+        acorn: [[1, 0], [3, 1], [0, 2], [1, 2], [4, 2], [5, 2], [6, 2]]
+      };
+
+      function idx(x, y) {
+        return y * state.cols + x;
+      }
+
+      function resizeBoard() {
+        const rect = wrap.getBoundingClientRect();
+        const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+        state.cssWidth = Math.max(1, rect.width - 28);
+        state.cssHeight = Math.max(1, rect.height - 28);
+        if (window.innerWidth <= 620) {
+          state.cssWidth = Math.max(1, rect.width - 16);
+          state.cssHeight = Math.max(1, rect.height - 16);
+        }
+        canvas.width = Math.floor(state.cssWidth * dpr);
+        canvas.height = Math.floor(state.cssHeight * dpr);
+        canvas.style.width = `${state.cssWidth}px`;
+        canvas.style.height = `${state.cssHeight}px`;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        const targetCell = window.innerWidth <= 620 ? 12 : 14;
+        const nextCols = Math.max(26, Math.min(76, Math.floor(state.cssWidth / targetCell)));
+        const nextRows = Math.max(22, Math.min(54, Math.floor(state.cssHeight / targetCell)));
+        if (nextCols !== state.cols || nextRows !== state.rows) {
+          remapGrid(nextCols, nextRows);
+        }
+        computeMetrics();
+        draw();
+      }
+
+      function remapGrid(nextCols, nextRows) {
+        const next = new Uint8Array(nextCols * nextRows);
+        const offsetX = Math.floor((nextCols - state.cols) / 2);
+        const offsetY = Math.floor((nextRows - state.rows) / 2);
+        for (let y = 0; y < state.rows; y += 1) {
+          for (let x = 0; x < state.cols; x += 1) {
+            const nx = x + offsetX;
+            const ny = y + offsetY;
+            if (nx >= 0 && nx < nextCols && ny >= 0 && ny < nextRows) {
+              next[ny * nextCols + nx] = state.cells[idx(x, y)];
+            }
+          }
+        }
+        state.cols = nextCols;
+        state.rows = nextRows;
+        state.cells = next;
+        state.lastCells = new Uint8Array(nextCols * nextRows);
+        recountAlive();
+      }
+
+      function computeMetrics() {
+        const gap = window.innerWidth <= 620 ? 1 : 2;
+        state.cellSize = Math.floor(Math.min(
+          (state.cssWidth - gap * (state.cols - 1)) / state.cols,
+          (state.cssHeight - gap * (state.rows - 1)) / state.rows
+        ));
+        const gridW = state.cellSize * state.cols + gap * (state.cols - 1);
+        const gridH = state.cellSize * state.rows + gap * (state.rows - 1);
+        state.offsetX = Math.floor((state.cssWidth - gridW) / 2);
+        state.offsetY = Math.floor((state.cssHeight - gridH) / 2);
+      }
+
+      function draw() {
+        const gap = window.innerWidth <= 620 ? 1 : 2;
+        ctx.clearRect(0, 0, state.cssWidth, state.cssHeight);
+        ctx.fillStyle = "#0b0f14";
+        ctx.fillRect(0, 0, state.cssWidth, state.cssHeight);
+
+        const agePulse = state.running ? 0.65 + Math.sin(performance.now() / 280) * 0.12 : 0.72;
+        for (let y = 0; y < state.rows; y += 1) {
+          for (let x = 0; x < state.cols; x += 1) {
+            const index = idx(x, y);
+            const value = state.cells[index];
+            const was = state.lastCells[index];
+            const px = state.offsetX + x * (state.cellSize + gap);
+            const py = state.offsetY + y * (state.cellSize + gap);
+
+            if (value) {
+              ctx.fillStyle = was ? colors.alive : colors.birth;
+              roundRect(px, py, state.cellSize, state.cellSize, Math.max(2, Math.floor(state.cellSize * 0.25)));
+              ctx.fill();
+              if (state.cellSize >= 8) {
+                ctx.fillStyle = `rgba(245, 201, 95, ${agePulse * 0.18})`;
+                roundRect(px + 2, py + 2, Math.max(1, state.cellSize - 4), Math.max(1, Math.floor(state.cellSize * 0.38)), 3);
+                ctx.fill();
+              }
+            } else if (was) {
+              ctx.fillStyle = colors.death;
+              roundRect(px, py, state.cellSize, state.cellSize, Math.max(2, Math.floor(state.cellSize * 0.25)));
+              ctx.globalAlpha = 0.55;
+              ctx.fill();
+              ctx.globalAlpha = 1;
+            } else {
+              ctx.fillStyle = (x + y) % 2 === 0 ? colors.empty : colors.empty2;
+              roundRect(px, py, state.cellSize, state.cellSize, Math.max(2, Math.floor(state.cellSize * 0.18)));
+              ctx.fill();
+            }
+          }
+        }
+
+        ctx.strokeStyle = colors.grid;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(
+          state.offsetX - 0.5,
+          state.offsetY - 0.5,
+          state.cols * state.cellSize + (state.cols - 1) * gap + 1,
+          state.rows * state.cellSize + (state.rows - 1) * gap + 1
+        );
+      }
+
+      function roundRect(x, y, width, height, radius) {
+        const r = Math.min(radius, width / 2, height / 2);
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + width, y, x + width, y + height, r);
+        ctx.arcTo(x + width, y + height, x, y + height, r);
+        ctx.arcTo(x, y + height, x, y, r);
+        ctx.arcTo(x, y, x + width, y, r);
+        ctx.closePath();
+      }
+
+      function step() {
+        const next = new Uint8Array(state.cols * state.rows);
+        let alive = 0;
+        let births = 0;
+        let deaths = 0;
+        let changed = false;
+        state.lastCells.set(state.cells);
+
+        for (let y = 0; y < state.rows; y += 1) {
+          for (let x = 0; x < state.cols; x += 1) {
+            const neighbors = countNeighbors(x, y);
+            const index = idx(x, y);
+            const live = state.cells[index] === 1;
+            const survives = live ? (neighbors === 2 || neighbors === 3) : neighbors === 3;
+            next[index] = survives ? 1 : 0;
+            if (survives) alive += 1;
+            if (!live && survives) births += 1;
+            if (live && !survives) deaths += 1;
+            if (next[index] !== state.cells[index]) changed = true;
+          }
+        }
+
+        state.cells = next;
+        state.alive = alive;
+        state.births = births;
+        state.deaths = deaths;
+        state.generation += 1;
+
+        if (!changed) {
+          state.stableTicks += 1;
+          if (state.stableTicks >= 2 && state.running) {
+            state.running = false;
+            statusLine.textContent = alive > 0 ? "结构已经稳定，可以单步观察或重新播种。" : "所有生命都消亡了，试试随机或放置图案。";
+            playSfx(180, 0.16, "triangle", 0.45);
+          }
+        } else {
+          state.stableTicks = 0;
+        }
+
+        syncStats();
+      }
+
+      function countNeighbors(x, y) {
+        let count = 0;
+        for (let dy = -1; dy <= 1; dy += 1) {
+          for (let dx = -1; dx <= 1; dx += 1) {
+            if (dx === 0 && dy === 0) continue;
+            let nx = x + dx;
+            let ny = y + dy;
+            if (state.wrap) {
+              nx = (nx + state.cols) % state.cols;
+              ny = (ny + state.rows) % state.rows;
+            } else if (nx < 0 || nx >= state.cols || ny < 0 || ny >= state.rows) {
+              continue;
+            }
+            count += state.cells[idx(nx, ny)];
+          }
+        }
+        return count;
+      }
+
+      function setRunning(nextRunning) {
+        state.running = nextRunning;
+        playBtn.textContent = state.running ? "暂停" : "播放";
+        stateStat.textContent = state.running ? "演化中" : "已暂停";
+        if (state.running) {
+          hideHand();
+          statusLine.textContent = "生命正在按 B3/S23 规则演化。";
+          playSfx(440, 0.08, "sine", 0.35);
+        } else {
+          statusLine.textContent = "已暂停，可以继续绘制或单步观察。";
+          playSfx(260, 0.08, "sine", 0.3);
+        }
+      }
+
+      function recountAlive() {
+        let alive = 0;
+        for (let i = 0; i < state.cells.length; i += 1) {
+          alive += state.cells[i];
+        }
+        state.alive = alive;
+      }
+
+      function syncStats() {
+        generationStat.textContent = String(state.generation);
+        aliveStat.textContent = String(state.alive);
+        changeStat.textContent = `${state.births} / ${state.deaths}`;
+        if (state.running) {
+          stateStat.textContent = "演化中";
+        } else if (state.alive === 0) {
+          stateStat.textContent = "空棋盘";
+        } else {
+          stateStat.textContent = "已暂停";
+        }
+        playBtn.textContent = state.running ? "暂停" : "播放";
+        draw();
+      }
+
+      function randomize() {
+        state.lastCells.set(state.cells);
+        const threshold = state.density / 100;
+        for (let i = 0; i < state.cells.length; i += 1) {
+          state.cells[i] = Math.random() < threshold ? 1 : 0;
+        }
+        state.generation = 0;
+        state.births = 0;
+        state.deaths = 0;
+        state.stableTicks = 0;
+        recountAlive();
+        hideHand();
+        statusLine.textContent = `已按 ${state.density}% 密度随机播种。`;
+        playSfx(520, 0.09, "square", 0.22);
+        syncStats();
+      }
+
+      function clearBoard() {
+        state.lastCells.set(state.cells);
+        state.cells.fill(0);
+        state.running = false;
+        state.generation = 0;
+        state.alive = 0;
+        state.births = 0;
+        state.deaths = 0;
+        state.stableTicks = 0;
+        statusLine.textContent = "棋盘已清空。";
+        playSfx(150, 0.12, "triangle", 0.36);
+        showHand();
+        syncStats();
+      }
+
+      function placePattern(name, centerX = Math.floor(state.cols / 2), centerY = Math.floor(state.rows / 2)) {
+        const pattern = patterns[name] || patterns.glider;
+        const width = Math.max(...pattern.map((p) => p[0])) + 1;
+        const height = Math.max(...pattern.map((p) => p[1])) + 1;
+        const originX = Math.floor(centerX - width / 2);
+        const originY = Math.floor(centerY - height / 2);
+        state.lastCells.set(state.cells);
+        for (const [px, py] of pattern) {
+          const x = originX + px;
+          const y = originY + py;
+          if (x >= 0 && x < state.cols && y >= 0 && y < state.rows) {
+            state.cells[idx(x, y)] = 1;
+          }
+        }
+        state.generation = 0;
+        state.births = 0;
+        state.deaths = 0;
+        state.stableTicks = 0;
+        recountAlive();
+        hideHand();
+        statusLine.textContent = "已把经典图案放在棋盘中央。";
+        playSfx(660, 0.07, "sine", 0.32);
+        syncStats();
+      }
+
+      function seedOpening() {
+        state.cells.fill(0);
+        placePattern("glider", Math.floor(state.cols * 0.3), Math.floor(state.rows * 0.32));
+        placePattern("acorn", Math.floor(state.cols * 0.58), Math.floor(state.rows * 0.55));
+        state.generation = 0;
+        state.running = true;
+        statusLine.textContent = "已进入棋盘，滑翔机和橡果正在启动。";
+        syncStats();
+      }
+
+      function pointerToCell(event) {
+        const rect = canvas.getBoundingClientRect();
+        const gap = window.innerWidth <= 620 ? 1 : 2;
+        const x = event.clientX - rect.left - state.offsetX;
+        const y = event.clientY - rect.top - state.offsetY;
+        const cx = Math.floor(x / (state.cellSize + gap));
+        const cy = Math.floor(y / (state.cellSize + gap));
+        const localX = x - cx * (state.cellSize + gap);
+        const localY = y - cy * (state.cellSize + gap);
+        if (
+          cx < 0 || cx >= state.cols ||
+          cy < 0 || cy >= state.rows ||
+          localX > state.cellSize ||
+          localY > state.cellSize
+        ) {
+          return null;
+        }
+        return { x: cx, y: cy, index: idx(cx, cy) };
+      }
+
+      function paintCell(event, forceNewStroke = false) {
+        const cell = pointerToCell(event);
+        if (!cell) return;
+        if (forceNewStroke) {
+          state.paintValue = state.cells[cell.index] ? 0 : 1;
+          state.lastPaintIndex = -1;
+        }
+        if (state.lastPaintIndex === cell.index) return;
+        state.lastCells.set(state.cells);
+        state.cells[cell.index] = state.paintValue;
+        state.lastPaintIndex = cell.index;
+        state.generation = 0;
+        state.births = state.paintValue ? 1 : 0;
+        state.deaths = state.paintValue ? 0 : 1;
+        state.stableTicks = 0;
+        recountAlive();
+        hideHand();
+        statusLine.textContent = state.paintValue ? "已绘制活细胞。" : "已擦除细胞。";
+        if (forceNewStroke) playSfx(state.paintValue ? 580 : 220, 0.045, "sine", 0.22);
+        syncStats();
+      }
+
+      function animate(now) {
+        const delta = Math.min(100, now - state.lastFrame);
+        state.lastFrame = now;
+        if (state.running) {
+          state.accumulator += delta;
+          const frameMs = 1000 / state.speed;
+          while (state.accumulator >= frameMs) {
+            step();
+            state.accumulator -= frameMs;
+          }
+          draw();
+        }
+        requestAnimationFrame(animate);
+      }
+
+      function setWrapMode(enabled) {
+        state.wrap = enabled;
+        wrapBtn.setAttribute("aria-pressed", enabled ? "true" : "false");
+        boundedBtn.setAttribute("aria-pressed", enabled ? "false" : "true");
+        statusLine.textContent = enabled ? "边界已切换为环形世界。" : "边界已切换为固定边缘。";
+        playSfx(enabled ? 510 : 310, 0.08, "triangle", 0.24);
+      }
+
+      function showHand() {
+        if (!state.hintVisible) return;
+        lifeHand.classList.add("show");
+      }
+
+      function hideHand() {
+        state.hintVisible = false;
+        lifeHand.classList.remove("show");
+      }
+
+      function initAudio() {
+        if (audio.started) return;
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) {
+          audio.enabled = false;
+          audioStatus.textContent = "BGM: 不可用";
+          return;
+        }
+        audio.ctx = new AudioContext();
+        audio.master = audio.ctx.createGain();
+        audio.music = audio.ctx.createGain();
+        audio.sfx = audio.ctx.createGain();
+        audio.master.gain.value = 0.72;
+        audio.music.gain.value = audio.enabled ? audio.bgmVolume : 0;
+        audio.sfx.gain.value = audio.enabled ? audio.sfxVolume : 0;
+        audio.music.connect(audio.master);
+        audio.sfx.connect(audio.master);
+        audio.master.connect(audio.ctx.destination);
+        audio.started = true;
+        if (audio.enabled) startMusicLoop();
+        syncAudioButton();
+      }
+
+      function startMusicLoop() {
+        if (!audio.ctx || audio.musicTimer) return;
+        ambientPulse();
+        audio.musicTimer = window.setInterval(ambientPulse, 980);
+      }
+
+      function stopMusicLoop() {
+        if (audio.musicTimer) {
+          window.clearInterval(audio.musicTimer);
+          audio.musicTimer = null;
+        }
+      }
+
+      function ambientPulse() {
+        if (!audio.ctx || !audio.enabled) return;
+        const sequence = [146.83, 174.61, 196, 220, 196, 174.61, 164.81, 196];
+        const root = sequence[audio.note % sequence.length];
+        audio.note += 1;
+        playTone(root, 0.62, "sine", 0.34, audio.music);
+        playTone(root * 1.5, 0.5, "triangle", 0.12, audio.music, 0.03);
+      }
+
+      function playSfx(freq, duration, type, gain) {
+        if (!audio.ctx || !audio.enabled) return;
+        playTone(freq, duration, type, gain, audio.sfx);
+      }
+
+      function playTone(freq, duration, type, gain, destination, delay = 0) {
+        const now = audio.ctx.currentTime + delay;
+        const osc = audio.ctx.createOscillator();
+        const env = audio.ctx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, now);
+        env.gain.setValueAtTime(0.0001, now);
+        env.gain.exponentialRampToValueAtTime(Math.max(0.0002, gain), now + 0.018);
+        env.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+        osc.connect(env);
+        env.connect(destination);
+        osc.start(now);
+        osc.stop(now + duration + 0.04);
+      }
+
+      function toggleAudio() {
+        initAudio();
+        audio.enabled = !audio.enabled;
+        if (audio.music) audio.music.gain.value = audio.enabled ? audio.bgmVolume : 0;
+        if (audio.sfx) audio.sfx.gain.value = audio.enabled ? audio.sfxVolume : 0;
+        if (audio.enabled) {
+          startMusicLoop();
+          playSfx(620, 0.08, "sine", 0.34);
+        } else {
+          stopMusicLoop();
+        }
+        syncAudioButton();
+      }
+
+      function syncAudioButton() {
+        audioBtn.setAttribute("aria-pressed", audio.enabled ? "true" : "false");
+        audioBtn.textContent = audio.enabled ? "声音" : "静音";
+        audioStatus.textContent = audio.enabled ? "BGM: 低音量" : "BGM: 静音";
+      }
+
+      function buildDemo() {
+        const demoCells = [];
+        for (let i = 0; i < 49; i += 1) {
+          const cell = document.createElement("span");
+          cell.className = "demo-cell";
+          demoGrid.appendChild(cell);
+          demoCells.push(cell);
+        }
+        const frames = [
+          [10, 17, 24, 23, 16],
+          [15, 16, 17, 24, 31],
+          [10, 17, 24, 25, 18],
+          [17, 24, 31, 30, 23]
+        ];
+        let frame = 0;
+        window.setInterval(() => {
+          const live = new Set(frames[frame % frames.length]);
+          demoCells.forEach((cell, index) => {
+            cell.classList.toggle("live", live.has(index));
+          });
+          frame += 1;
+        }, 520);
+      }
+
+      function startGame(withSound) {
+        audio.enabled = withSound;
+        initAudio();
+        if (audio.ctx && audio.ctx.state === "suspended") {
+          audio.ctx.resume();
+        }
+        if (!withSound) {
+          if (audio.music) audio.music.gain.value = 0;
+          if (audio.sfx) audio.sfx.gain.value = 0;
+          stopMusicLoop();
+        }
+        syncAudioButton();
+        startOverlay.classList.add("hide");
+        state.started = true;
+        seedOpening();
+        hideHand();
+      }
+
+      function bindEvents() {
+        startBtn.addEventListener("click", () => startGame(true));
+        quietStartBtn.addEventListener("click", () => startGame(false));
+        audioBtn.addEventListener("click", toggleAudio);
+
+        playBtn.addEventListener("click", () => {
+          initAudio();
+          setRunning(!state.running);
+        });
+
+        stepBtn.addEventListener("click", () => {
+          initAudio();
+          state.running = false;
+          step();
+          statusLine.textContent = "已推进一代。";
+          playSfx(460, 0.055, "triangle", 0.26);
+        });
+
+        randomBtn.addEventListener("click", () => {
+          initAudio();
+          randomize();
+        });
+
+        clearBtn.addEventListener("click", () => {
+          initAudio();
+          clearBoard();
+        });
+
+        speedRange.addEventListener("input", () => {
+          state.speed = Number(speedRange.value);
+          speedLabel.textContent = `${state.speed} 代/秒`;
+        });
+
+        densityRange.addEventListener("input", () => {
+          state.density = Number(densityRange.value);
+          densityLabel.textContent = `${state.density}%`;
+        });
+
+        boundedBtn.addEventListener("click", () => setWrapMode(false));
+        wrapBtn.addEventListener("click", () => setWrapMode(true));
+
+        placePatternBtn.addEventListener("click", () => {
+          initAudio();
+          placePattern(patternSelect.value);
+        });
+
+        canvas.addEventListener("pointerdown", (event) => {
+          event.preventDefault();
+          initAudio();
+          canvas.setPointerCapture(event.pointerId);
+          state.pointerDown = true;
+          paintCell(event, true);
+        });
+
+        canvas.addEventListener("pointermove", (event) => {
+          if (!state.pointerDown) return;
+          event.preventDefault();
+          paintCell(event, false);
+        });
+
+        canvas.addEventListener("pointerup", (event) => {
+          state.pointerDown = false;
+          state.lastPaintIndex = -1;
+          try {
+            canvas.releasePointerCapture(event.pointerId);
+          } catch (err) {
+            // Pointer capture may already be released by the browser.
+          }
+        });
+
+        canvas.addEventListener("pointercancel", () => {
+          state.pointerDown = false;
+          state.lastPaintIndex = -1;
+        });
+
+        window.addEventListener("resize", resizeBoard);
+        window.addEventListener("orientationchange", () => window.setTimeout(resizeBoard, 180));
+      }
+
+      function init() {
+        buildDemo();
+        bindEvents();
+        resizeBoard();
+        syncStats();
+        syncAudioButton();
+        requestAnimationFrame((now) => {
+          state.lastFrame = now;
+          requestAnimationFrame(animate);
+        });
+      }
+
+      init();
+    })();
+  </script>
+</body>
+</html>
